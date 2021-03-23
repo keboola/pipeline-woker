@@ -8,21 +8,22 @@
         "adminPassword": {
             "type": "secureString"
         },
-        "workerName": {
+        "scriptContent": {
             "type": "string"
-        },
-        "patToken": {
-            "type": "secureString"
         }
     },
     "variables": {
-        "resourceName": "[concat('worker-', uniqueString(parameters('workerName')))]",
-        "dataDiskName": "[concat('data-', uniqueString(parameters('workerName')))]",
-        "osDiskName": "[concat('os-', uniqueString(parameters('workerName')))]",
-        "diagnosticsStorageAccountName": "workerdiagnosticsstorage",
+        "resourceName": "[concat('worker-', resourceGroup().name)]",
+        "dataDiskName": "[concat('worker-data-', resourceGroup().name)]",
+        "osDiskName": "[concat('worker-os-', resourceGroup().name)]",
+        "diagnosticsStorageAccountName": "[concat('diagworker', uniqueString(resourceGroup().name))]",
         "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('resourceName'))]",
         "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('resourceName'))]",
-        "subnetRef": "[concat(variables('vnetId'), '/subnets/default')]"
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/default')]",
+        "resourceTags": {
+            "workerName": "[resourceGroup().name]",
+            "purpose": "azure-pipeline"
+        }
     },
     "resources": [
         {
@@ -30,9 +31,7 @@
             "apiVersion": "2019-07-01",
             "name": "[variables('dataDiskName')]",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "sku": {
                 "name": "StandardSSD_LRS",
                 "tier": "Standard"
@@ -54,9 +53,7 @@
             "apiVersion": "2019-07-01",
             "name": "[variables('osDiskName')]",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "sku": {
                 "name": "StandardSSD_LRS",
                 "tier": "Standard"
@@ -83,9 +80,7 @@
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2018-10-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkSecurityGroups/', variables('resourceName'))]",
                 "[concat('Microsoft.Network/virtualNetworks/', variables('resourceName'))]",
@@ -116,9 +111,7 @@
             "type": "Microsoft.Network/publicIpAddresses",
             "apiVersion": "2019-02-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "properties": {
                 "publicIpAllocationMethod": "Dynamic"
             },
@@ -131,9 +124,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "apiVersion": "2019-02-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "properties": {
                 "securityRules": []
             }
@@ -143,9 +134,7 @@
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2019-09-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": ["10.0.1.0/24"]
@@ -165,12 +154,11 @@
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2020-12-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkInterfaces/', variables('resourceName'))]",
                 "[concat('Microsoft.Compute/disks/', variables('dataDiskName'))]",
+                "[concat('Microsoft.Compute/disks/', variables('osDiskName'))]",
                 "[concat('Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName'))]"
             ],
             "properties": {
@@ -189,17 +177,15 @@
                     },
                     "dataDisks": [
                         {
-                            "lun": 0,
+                            "lun": 10,
                             "name": "[variables('dataDiskName')]",
                             "createOption": "Attach",
                             "caching": "ReadOnly",
-                            "writeAcceleratorEnabled": false,
                             "managedDisk": {
                                 "storageAccountType": "StandardSSD_LRS",
                                 "id": "[resourceId('Microsoft.Compute/disks/', variables('dataDiskName'))]"
                             },
-                            "diskSizeGB": 256,
-                            "toBeDetached": false
+                            "diskSizeGB": 256
                         }
                     ],
                     "imageReference": {
@@ -217,7 +203,7 @@
                     ]
                 },
                 "osProfile": {
-                    "computerName": "[parameters('workerName')]",
+                    "computerName": "[resourceGroup().name]",
                     "adminUsername": "[parameters('adminUsername')]",
                     "adminPassword": "[parameters('adminPassword')]",
                     "linuxConfiguration": {
@@ -241,10 +227,7 @@
                     "dependsOn": [
                         "[concat('Microsoft.Compute/virtualMachines/', variables('resourceName'))]"
                     ],
-                    "tags": {
-                        "displayName": "Startup script",
-                        "workerName": "[parameters('workerName')]"
-                    },
+                    "tags": "[variables('resourceTags')]",
                     "properties": {
                         "publisher": "Microsoft.Azure.Extensions",
                         "type": "CustomScript",
@@ -255,8 +238,7 @@
                             "timestamp": 123456789
                         },
                         "protectedSettings": {
-                            "commandToExecute": "[concat('bash test.sh ', parameters('patToken'), ' ', variables('resourceName'))]",
-                            "fileUris": ["https://gist.githubusercontent.com/odinuv/0d50083e5462ea2f00e6c5b2e615b0da/raw/514037186b5ad7b6b5f8a29f9aaa1226e888b73a/test.sh"]
+                            "script": "[parameters('scriptContent')]"
                         }
                     }
                 }
@@ -267,9 +249,7 @@
             "type": "Microsoft.Storage/storageAccounts",
             "apiVersion": "2019-04-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "workerName": "[parameters('workerName')]"
-            },
+            "tags": "[variables('resourceTags')]",
             "properties": {},
             "kind": "Storage",
             "sku": {
