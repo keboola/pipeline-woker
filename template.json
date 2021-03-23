@@ -1,0 +1,261 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "secureString"
+        },
+        "workerName": {
+            "type": "string"
+        },
+        "patToken": {
+            "type": "secureString"
+        }
+    },
+    "variables": {
+        "resourceName": "[concat('worker-', uniqueString(parameters('workerName')))]",
+        "dataDiskName": "[concat('data-', uniqueString(parameters('workerName')))]",
+        "osDiskName": "[concat('os-', uniqueString(parameters('workerName')))]",
+        "diagnosticsStorageAccountName": "workerdiagnosticsstorage",
+        "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('resourceName'))]",
+        "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('resourceName'))]",
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/default')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/disks",
+            "apiVersion": "2019-07-01",
+            "name": "[variables('dataDiskName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "StandardSSD_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "creationData": {
+                    "createOption": "Empty"
+                },
+                "diskSizeGB": 256,
+                "diskIOPSReadWrite": 500,
+                "diskMBpsReadWrite": 60,
+                "encryption": {
+                    "type": "EncryptionAtRestWithPlatformKey"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/disks",
+            "apiVersion": "2019-07-01",
+            "name": "[variables('osDiskName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "StandardSSD_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "osType": "Linux",
+                "hyperVGeneration": "V1",
+                "creationData": {
+                    "createOption": "FromImage",
+                    "imageReference": {
+                        "id": "[concat('/Subscriptions/', subscription().subscriptionId, '/Providers/Microsoft.Compute/Locations/', resourceGroup().location, '/Publishers/Canonical/ArtifactTypes/VMImage/Offers/UbuntuServer/Skus/18.04-LTS/Versions/18.04.202101290')]"
+                    }
+                },
+                "diskSizeGB": 30,
+                "diskIOPSReadWrite": 500,
+                "diskMBpsReadWrite": 60,
+                "encryption": {
+                    "type": "EncryptionAtRestWithPlatformKey"
+                }
+            }
+        },
+        {
+            "name": "[variables('resourceName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2018-10-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('resourceName'))]",
+                "[concat('Microsoft.Network/virtualNetworks/', variables('resourceName'))]",
+                "[concat('Microsoft.Network/publicIpAddresses/', parameters('resourceName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', parameters('resourceName'))]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[variables('nsgId')]"
+                }
+            }
+        },
+        {
+            "name": "[parameters('resourceName')]",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2019-02-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIpAllocationMethod": "Dynamic"
+            },
+            "sku": {
+                "name": "Basic"
+            }
+        },
+        {
+            "name": "[variables('resourceName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-02-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": []
+            }
+        },
+        {
+            "name": "[variables('resourceName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2019-09-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": ["10.0.1.0/24"]
+                },
+                "subnets": [
+                    {
+                        "name": "default",
+                        "properties": {
+                            "addressPrefix": "10.0.1.0/24"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('resourceName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-12-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('resourceName'))]",
+                "[concat('Microsoft.Compute/disks/', variables('dataDiskName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_D2s_v3"
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "osType": "Linux",
+                        "createOption": "fromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "storageAccountType": "StandardSSD_LRS"
+                        },
+                        "diskSizeGB": 30
+                    },
+                    "dataDisks": [
+                        {
+                            "lun": 0,
+                            "name": "[variables('dataDiskName')]",
+                            "createOption": "Attach",
+                            "caching": "ReadOnly",
+                            "writeAcceleratorEnabled": false,
+                            "managedDisk": {
+                                "storageAccountType": "StandardSSD_LRS",
+                                "id": "[resourceId('Microsoft.Compute/disks/', variables('dataDiskName'))]"
+                            },
+                            "diskSizeGB": 256,
+                            "toBeDetached": false
+                        }
+                    ],
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "18.04-LTS",
+                        "version": "latest"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('resourceName'))]"
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[parameters('workerName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": false
+                    },
+                    "secrets": []
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[concat('https://', variables('diagnosticsStorageAccountName'), '.blob.core.windows.net/')]"
+                    }
+                }
+            },
+            "resources": [
+                {
+                    "name": "[concat(variables('resourceName'), 'startup')]",
+                    "type": "Extensions",
+                    "location": "[resourceGroup().location]",
+                    "apiVersion": "2019-03-01",
+                    "dependsOn": [
+                        "[concat('Microsoft.Compute/virtualMachines/', variables('resourceName'))]"
+                    ],
+                    "tags": {
+                        "displayName": "Startup script"
+                    },
+                    "properties": {
+                        "publisher": "Microsoft.Azure.Extensions",
+                        "type": "CustomScript",
+                        "typeHandlerVersion": "2.1",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "skipDos2Unix": false,
+                            "timestamp": 123456789
+                        },
+                        "protectedSettings": {
+                            "commandToExecute": "[concat('bash test.sh ', parameters('patToken'), ' ', variables('resourceName'))]",
+                            "fileUris": ["https://gist.githubusercontent.com/odinuv/0d50083e5462ea2f00e6c5b2e615b0da/raw/514037186b5ad7b6b5f8a29f9aaa1226e888b73a/test.sh"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[variables('diagnosticsStorageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-04-01",
+            "location": "[resourceGroup().location]",
+            "properties": {},
+            "kind": "Storage",
+            "sku": {
+                "name": "Standard_LRS"
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        }
+    }
+}

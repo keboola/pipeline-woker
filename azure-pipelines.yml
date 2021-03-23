@@ -1,0 +1,44 @@
+pr: none
+trigger:
+  batch: true
+  branches:
+    include:
+      - '*'
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  imageName: 'test'
+
+stages:
+  - stage: tests
+    displayName: 'Deploy Worker'
+    jobs:
+      - job: test
+        steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'Keboola DEV PS Team CI(9577e289-304e-4165-abe0-91c933200878)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -Eeuo pipefail
+
+                printf "Running deployment"
+                az deployment group create --name "$(DEPLOYMENT_NAME)" --resource-group "$(RESOURCE_GROUP)" \
+                    --subscription "$(SUBSCRIPTION)" --template-file ./template.json \
+                    --parameters workerName="$(WORKER_NAME)" adminUsername="$(ADMIN_USERNAME)" \
+                      adminPassword="$(ADMIN_PASSWORD)" patToken="$(PAT_TOKEN)"
+            env:
+              DEPLOYMENT_NAME: $(DEPLOYMENT_NAME)
+              RESOURCE_GROUP: $(RESOURCE_GROUP)
+              SUBSCRIPTION: $(SUBSCRIPTION)
+              WORKER_NAME: $(WORKER_NAME)
+              ADMIN_USERNAME: $(ADMIN_USERNAME)
+              ADMIN_PASSWORD: $(ADMIN_PASSWORD)
+              PAT_TOKEN: $(PAT_TOKEN)
+
+
+
+
