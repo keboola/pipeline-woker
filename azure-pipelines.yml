@@ -12,10 +12,10 @@ variables:
   imageName: 'test'
 
 stages:
-  - stage: tests
+  - stage: deploy
     displayName: 'Deploy Worker'
     jobs:
-      - job: test
+      - job: deployWorker
         steps:
           - task: AzureCLI@2
             inputs:
@@ -25,11 +25,11 @@ stages:
               inlineScript: |
                 set -Eeuo pipefail
 
-                printf "Running deployment"
-                az deployment group create --name "$(DEPLOYMENT_NAME)" --resource-group "$(RESOURCE_GROUP)" \
-                    --subscription "$(SUBSCRIPTION)" --template-file ./template.json \
-                    --parameters workerName="$(WORKER_NAME)" adminUsername="$(ADMIN_USERNAME)" \
-                      adminPassword="$(ADMIN_PASSWORD)" patToken="$(PAT_TOKEN)"
+                printf "Running deployment of $WORKER_NAME"
+                az deployment group create --name "$DEPLOYMENT_NAME" --resource-group "$RESOURCE_GROUP" \
+                    --subscription "$SUBSCRIPTION" --template-file ./template.json \
+                    --parameters workerName="$WORKER_NAME" adminUsername="$ADMIN_USERNAME" \
+                      adminPassword="$ADMIN_PASSWORD" patToken="$PAT_TOKEN"
             env:
               DEPLOYMENT_NAME: $(DEPLOYMENT_NAME)
               RESOURCE_GROUP: $(RESOURCE_GROUP)
