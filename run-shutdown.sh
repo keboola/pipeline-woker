@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-
 if [[ "$WORKER_NAME" != "pipeline-"* ]] ;
 then
   printf "'%s' is not a valid worker name (must match 'pipeline-*')." "$WORKER_NAME"
