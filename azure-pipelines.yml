@@ -13,26 +13,8 @@ stages:
             inputs:
               azureSubscription: 'Keboola DEV PS Team CI(9577e289-304e-4165-abe0-91c933200878)'
               scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                set -Eeuo pipefail
-
-                if [[ "$WORKER_NAME" == "pipeline-"* ]] ;
-                then
-                  envsubst < startup.sh > startup-replaced.sh
-                  export SCRIPT_CONTENT=$(cat startup-replaced.sh | gzip -9 | base64 -w 0)
-                  echo "Running deployment of $WORKER_NAME\n"
-
-                  az group create --name "$WORKER_NAME" --subscription "$SUBSCRIPTION" \
-                    --location "East US" --tags "purpose=azure-pipeline" "workerName=$WORKER_NAME"
-                  az deployment group create --name "$WORKER_NAME" --resource-group "$WORKER_NAME" \
-                      --subscription "$SUBSCRIPTION" --template-file ./template.json \
-                      --parameters adminUsername="$ADMIN_USERNAME" adminPassword="$ADMIN_PASSWORD" \
-                            scriptContent="$SCRIPT_CONTENT"
-                else
-                  echo "'$WORKER_NAME' is not a valid worker name (must match 'pipeline-*')."
-                  exit 1
-                fi
+              scriptLocation: 'scriptPath'
+              scriptPath: 'run-startup.sh'
             env:
               SUBSCRIPTION: $(SUBSCRIPTION)
               WORKER_NAME: $(WORKER_NAME)

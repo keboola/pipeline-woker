@@ -7,9 +7,6 @@
         },
         "adminPassword": {
             "type": "secureString"
-        },
-        "scriptContent": {
-            "type": "string"
         }
     },
     "variables": {
@@ -217,32 +214,7 @@
                         "storageUri": "[concat('https://', variables('diagnosticsStorageAccountName'), '.blob.core.windows.net/')]"
                     }
                 }
-            },
-            "resources": [
-                {
-                    "name": "[concat(variables('resourceName'), 'startup')]",
-                    "type": "Extensions",
-                    "location": "[resourceGroup().location]",
-                    "apiVersion": "2019-03-01",
-                    "dependsOn": [
-                        "[concat('Microsoft.Compute/virtualMachines/', variables('resourceName'))]"
-                    ],
-                    "tags": "[variables('resourceTags')]",
-                    "properties": {
-                        "publisher": "Microsoft.Azure.Extensions",
-                        "type": "CustomScript",
-                        "typeHandlerVersion": "2.1",
-                        "autoUpgradeMinorVersion": true,
-                        "settings": {
-                            "skipDos2Unix": false,
-                            "timestamp": 123456789
-                        },
-                        "protectedSettings": {
-                            "script": "[parameters('scriptContent')]"
-                        }
-                    }
-                }
-            ]
+            }
         },
         {
             "name": "[variables('diagnosticsStorageAccountName')]",
@@ -258,9 +230,9 @@
         }
     ],
     "outputs": {
-        "adminUsername": {
+        "vmId": {
             "type": "string",
-            "value": "[parameters('adminUsername')]"
+            "value": "[resourceid('Microsoft.Compute/virtualMachines/', variables('resourceName'))]"
         }
     }
 }

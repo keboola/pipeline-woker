@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-#set -Eeuo pipefail
-#set -x
-
-test=$(ls -la ~)
-echo "test $test"
-pwd
+set -Eeuo pipefail
 
 if [[ -d "/datadrive" ]]
 then
@@ -14,31 +9,18 @@ fi
 
 printf "\nSetting up disk\n"
 # pick up the disk identified by LUN specified in the template
-lsblk -i -o HCTL,NAME > lsblkout
-cat lsblkout
-disk_rec=$(cat lsblkout | grep ":10")
-echo "Disk record: $disk_rec"
-disk_name=$(printf "$disk_rec" | gawk 'match($0, /([a-z]+)/, a) {print a[1]}')
-while :
-do
-  printf "\nDisk name: $disk_name\n"
-  if [[ -n "$disk_name" ]]
-  then
-      printf '\nGot disk name: %s\n' "$disk_name"
-      break
-  fi
-  sleep 5
-  break
-done
+disk_record=$(lsblk -o HCTL,NAME | grep ":10")
+disk_name=$(printf "%s" "$disk_record" | gawk 'match($0, /([a-z]+)/, a) {print a[1]}')
+printf "\nDisk name: %s" "$disk_name\n"
 
-sudo parted /dev/$disk_name --script mklabel gpt mkpart xfspart xfs 0% 100%
+sudo parted "/dev/$disk_name" --script mklabel gpt mkpart xfspart xfs 0% 100%
 part_name=$(printf '%s1' "$disk_name")
-sudo mkfs.xfs -f /dev/$part_name
-sudo partprobe /dev/$part_name
+sudo mkfs.xfs -f "/dev/$part_name"
+sudo partprobe "/dev/$part_name"
 
 block_record=$(sudo blkid | grep "xfs")
-uuid=$(printf "$block_record" | gawk 'match($0, /UUID="([a-zA-Z0-9\-]*)"/, a) {print a[1]}')
-printf "UUID=$uuid /datadrive xfs defaults,nofail 0 2\n" | sudo tee -a /etc/fstab
+uuid=$(printf "%s" "$block_record" | gawk 'match($0, /UUID="([a-zA-Z0-9\-]*)"/, a) {print a[1]}')
+printf "UUID=%s /datadrive xfs defaults,nofail 0 2\n" "$uuid"| sudo tee -a /etc/fstab
 sudo mkdir /datadrive
 sudo mount /datadrive
 
