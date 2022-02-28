@@ -222,12 +222,13 @@
             "apiVersion": "2021-08-01",
             "location": "[resourceGroup().location]",
             "tags": "[variables('resourceTags')]",
-            "properties": {},
+            "properties": {
+            	"minimumTlsVersion": "TLS1_2"
+            },
             "kind": "Storage",
             "sku": {
                 "name": "Standard_LRS"
-            },
-            "minimumTlsVersion": "TLS1_2"
+            }
         }
     ],
     "outputs": {
