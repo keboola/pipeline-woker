@@ -67,7 +67,7 @@ mkdir azagent && cd azagent
 tar zxvf ./../agent.tar.gz > /dev/null
 rm ../agent.tar.gz
 sudo chown testadmin /home/testadmin/azagent/
-printf "/home/testadmin/azagent/config.sh --replace --acceptTeeEula --unattended --url https://dev.azure.com/keboola-dev/ --auth pat --token $PAT_TOKEN --pool default --agent $WORKER_NAME --work /datadrive/_work" > /home/testadmin/azagent/wrap.sh
+printf "/home/testadmin/azagent/config.sh --replace --acceptTeeEula --unattended --url https://dev.azure.com/keboola-dev/ --auth pat --token $PAT_TOKEN --pool $POOL_NAME --agent $WORKER_NAME --work /datadrive/_work" > /home/testadmin/azagent/wrap.sh
 sudo chmod a+x /home/testadmin/azagent/wrap.sh
 runuser -l testadmin -c '/home/testadmin/azagent/wrap.sh'
 sudo mkdir /datadrive/_work

@@ -20,4 +20,5 @@ stages:
               WORKER_NAME: $(WORKER_NAME)
               ADMIN_USERNAME: $(ADMIN_USERNAME)
               ADMIN_PASSWORD: $(ADMIN_PASSWORD)
+              POOL_NAME: $(POOL_NAME)
               PAT_TOKEN: $(System.AccessToken)

@@ -9,6 +9,7 @@ export WORKER_NAME="pipeline-xxxxx"
 export ADMIN_USERNAME="xxxxx"
 export ADMIN_PASSWORD="xxxxx"
 export PAT_TOKEN="xxxxx"
+export POOL_NAME="xxxxx"
 
 ./run-startup.sh
 ```
