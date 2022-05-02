@@ -33,7 +33,7 @@ vmId=$(
     --output tsv
 )
 
-envsubst '${PAT_TOKEN} ${$WORKER_NAME}' < startup.sh > startup-replaced.sh
+envsubst '${PAT_TOKEN} ${$WORKER_NAME} ${POOL_NAME}' < startup.sh > startup-replaced.sh
 script_content=$(cat startup-replaced.sh | gzip -9 | base64 -w 0)
 
 printf "\nRunning Startup script"
