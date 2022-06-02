@@ -22,3 +22,7 @@ export PAT_TOKEN="xxxxx"
 
 ./run-shutdown.sh
 ```
+
+## License
+
+MIT licensed, see [LICENSE](./LICENSE) file.
