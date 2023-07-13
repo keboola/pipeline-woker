@@ -11,7 +11,7 @@ stages:
         steps:
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'Keboola DEV PS Team CI(9577e289-304e-4165-abe0-91c933200878)'
+              azureSubscription: 'Keboola DEV PS Team CI'
               scriptType: 'bash'
               scriptLocation: 'scriptPath'
               scriptPath: 'run-startup.sh'
