@@ -52,7 +52,7 @@ printf "{\"data-root\": \"/datadrive/docker\"}" | sudo tee -a /etc/docker/daemon
 
 printf "\nInstall docker compose\n"
 # https://docs.docker.com/compose/install/
-sudo curl -s -L "https://github.com/docker/compose/releases/download/2.5.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo curl -f -s -L "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 
 # Enable Swap limit capabilities
@@ -63,7 +63,7 @@ sudo update-grub
 
 printf "\nSetting up agent\n"
 cd /home/testadmin
-curl -s https://vstsagentpackage.azureedge.net/agent/2.202.1/vsts-agent-linux-x64-2.202.1.tar.gz -o agent.tar.gz
+curl -s https://vstsagentpackage.azureedge.net/agent/3.240.1/vsts-agent-linux-x64-3.240.1.tar.gz -o agent.tar.gz
 mkdir azagent && cd azagent
 tar zxvf ./../agent.tar.gz > /dev/null
 rm ../agent.tar.gz
